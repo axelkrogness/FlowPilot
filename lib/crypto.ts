@@ -1,0 +1,4 @@
+import crypto from 'crypto';
+function key(){const raw=process.env.ENCRYPTION_KEY;if(process.env.NODE_ENV==='production'&&!raw)throw new Error('ENCRYPTION_KEY is required in production');return crypto.createHash('sha256').update(raw||'development-only-change-me').digest()}
+export function encrypt(v:string){const iv=crypto.randomBytes(12),c=crypto.createCipheriv('aes-256-gcm',key(),iv);const enc=Buffer.concat([c.update(String(v),'utf8'),c.final()]);return [iv.toString('base64'),c.getAuthTag().toString('base64'),enc.toString('base64')].join('.')}
+export function decrypt(v:string){const [a,b,c]=v.split('.');const d=crypto.createDecipheriv('aes-256-gcm',key(),Buffer.from(a,'base64'));d.setAuthTag(Buffer.from(b,'base64'));return Buffer.concat([d.update(Buffer.from(c,'base64')),d.final()]).toString('utf8')}

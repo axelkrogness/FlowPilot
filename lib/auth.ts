@@ -1,0 +1,7 @@
+import {cookies} from 'next/headers';import {SignJWT,jwtVerify} from 'jose';import {db} from './db';
+const key=()=>{const raw=process.env.AUTH_SECRET;if(process.env.NODE_ENV==='production'&&!raw)throw new Error('AUTH_SECRET is required in production');return new TextEncoder().encode(raw||'development-only-change-me')};
+export async function createSession(userId:string){const token=await new SignJWT({userId}).setProtectedHeader({alg:'HS256'}).setIssuedAt().setExpirationTime('7d').sign(key());(await cookies()).set('flowpilot_session',token,{httpOnly:true,sameSite:'lax',secure:process.env.NODE_ENV==='production',path:'/',maxAge:604800});}
+export async function clearSession(){(await cookies()).delete('flowpilot_session')}
+export async function currentUser(){try{const t=(await cookies()).get('flowpilot_session')?.value;if(!t)return null;const {payload}=await jwtVerify(t,key());return db.user.findUnique({where:{id:String(payload.userId)},include:{memberships:{include:{team:true}}}})}catch{return null}}
+export async function requireUser(){const u=await currentUser();if(!u)throw new Error('Unauthorized');return u}
+export async function requireWorkflowRole(id:string,roles?:string[]){const u=await requireUser();const w=await db.workflow.findUnique({where:{id}});if(!w)throw new Error('Not found');const m=u.memberships.find(x=>x.teamId===w.teamId);if(!m||roles&&!roles.includes(m.role))throw new Error('Forbidden');return {u,w,m}}

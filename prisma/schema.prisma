@@ -1,0 +1,200 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+  APPROVER
+  VIEWER
+}
+
+enum WorkflowState {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum ExecutionStatus {
+  QUEUED
+  RUNNING
+  PAUSED
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+enum StepStatus {
+  PENDING
+  RUNNING
+  PAUSED
+  SUCCEEDED
+  FAILED
+  SKIPPED
+}
+
+enum TriggerType {
+  MANUAL
+  WEBHOOK
+  SCHEDULE
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  passwordHash  String
+  name          String
+  createdAt     DateTime       @default(now())
+  memberships   Membership[]
+  approvals     Approval[]
+  notifications Notification[]
+}
+
+model Team {
+  id          String       @id @default(cuid())
+  name        String
+  createdAt   DateTime     @default(now())
+  memberships Membership[]
+  workflows   Workflow[]
+  secrets     Secret[]
+}
+
+model Membership {
+  id     String @id @default(cuid())
+  userId String
+  teamId String
+  role   Role   @default(MEMBER)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, teamId])
+}
+
+model Workflow {
+  id           String        @id @default(cuid())
+  teamId       String
+  name         String
+  description  String        @default("")
+  state        WorkflowState @default(DRAFT)
+  draftGraph   Json
+  version      Int           @default(0)
+  webhookToken String        @unique @default(cuid())
+  scheduleCron String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  team          Team              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  versions      WorkflowVersion[]
+  executions    Execution[]
+  scheduleFires ScheduleFire[]
+}
+
+model WorkflowVersion {
+  id         String   @id @default(cuid())
+  workflowId String
+  number     Int
+  graph      Json
+  createdAt  DateTime @default(now())
+
+  workflow   Workflow    @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  executions Execution[]
+
+  @@unique([workflowId, number])
+}
+
+model Execution {
+  id            String          @id @default(cuid())
+  workflowId    String
+  versionId     String?
+  trigger       TriggerType
+  status        ExecutionStatus @default(QUEUED)
+  input         Json?
+  context       Json?
+  currentNodeId String?
+  resumeAt      DateTime?
+  error         String?
+  startedAt     DateTime?
+  finishedAt    DateTime?
+  createdAt     DateTime        @default(now())
+
+  workflow  Workflow         @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  version   WorkflowVersion? @relation(fields: [versionId], references: [id])
+  steps     ExecutionStep[]
+  approvals Approval[]
+}
+
+model ExecutionStep {
+  id          String     @id @default(cuid())
+  executionId String
+  nodeId      String
+  nodeType    String
+  name        String
+  status      StepStatus @default(PENDING)
+  attempt     Int        @default(1)
+  input       Json?
+  output      Json?
+  error       String?
+  startedAt   DateTime?
+  finishedAt  DateTime?
+  durationMs  Int?
+
+  execution Execution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
+  @@index([executionId, nodeId])
+}
+
+model Approval {
+  id            String    @id @default(cuid())
+  executionId   String
+  nodeId        String?
+  requestedById String?
+  status        String    @default("PENDING")
+  note          String?
+  createdAt     DateTime  @default(now())
+  resolvedAt    DateTime?
+
+  execution   Execution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  requestedBy User?     @relation(fields: [requestedById], references: [id])
+}
+
+model Secret {
+  id             String   @id @default(cuid())
+  teamId         String
+  key            String
+  encryptedValue String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, key])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  body      String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ScheduleFire {
+  id           String   @id @default(cuid())
+  workflowId   String
+  scheduledFor DateTime
+  createdAt    DateTime @default(now())
+
+  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@unique([workflowId, scheduledFor])
+}

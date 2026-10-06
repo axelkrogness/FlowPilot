@@ -1,0 +1,5 @@
+import fs from 'node:fs';import path from 'node:path';
+const must=['README.md','.env.example','prisma/schema.prisma','docs/API.md','docs/ARCHITECTURE.md','docs/REQUIREMENTS.md','lib/engine.ts','worker/index.ts','cpp-worker/CMakeLists.txt','app/settings/page.tsx','app/analytics/page.tsx','app/api/webhooks/[token]/route.ts','app/api/workflows/[id]/execute/route.ts'];let bad=0;for(const f of must){if(!fs.existsSync(f)){console.error('MISSING',f);bad++}}
+const engine=fs.readFileSync('lib/engine.ts','utf8');for(const needle of ["type==='http'","type==='ai'","type==='condition'","type==='delay'","type==='approval'","type==='database'","ctx.env","maxAttempts"]){if(!engine.includes(needle)){console.error('ENGINE MISSING',needle);bad++}}
+const req=fs.readFileSync('docs/REQUIREMENTS.md','utf8');for(const needle of ['Powered by Codyza','Scheduled executions','Workflow versions','Pause and resume controls','Public live URL'])if(!req.includes(needle)){console.error('TRACEABILITY MISSING',needle);bad++}
+if(bad)process.exit(1);console.log('FlowPilot source verification passed');

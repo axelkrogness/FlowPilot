@@ -1,0 +1,2 @@
+import {currentUser} from '@/lib/auth';import {redirect} from 'next/navigation';import Link from 'next/link';import SettingsPanel from '@/components/SettingsPanel';
+export default async function Settings(){const u=await currentUser();if(!u)redirect('/login');return <main className="container"><div className="row between"><div><h1>Team & environment</h1><p className="muted">Members, roles, encrypted workflow secrets and notifications.</p></div><Link className="btn secondary" href="/dashboard">Dashboard</Link></div><SettingsPanel/></main>}
