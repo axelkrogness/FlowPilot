@@ -1,4 +1,4 @@
-import {db} from './db';
+﻿import {db} from './db';
 import {decrypt} from './crypto';
 
 type N={id:string,type?:string,data?:any}; type E={source:string,target:string,sourceHandle?:string};
@@ -8,8 +8,24 @@ async function executeNode(type:string,cfg:any,ctx:any,executionId:string,node:N
  if(type==='trigger') return {triggered:true};
  if(type==='http'){const r=await fetch(cfg.url,{method:cfg.method||'GET',headers:cfg.headers||{},body:['GET','HEAD'].includes((cfg.method||'GET').toUpperCase())?undefined:JSON.stringify(cfg.body||{})});const text=await r.text();let body:any=text;try{body=JSON.parse(text)}catch{}if(!r.ok)throw new Error(`HTTP ${r.status}`);return {status:r.status,body}}
  if(type==='condition'){const left=interpolate(cfg.left??cfg.path??'',ctx),right=interpolate(cfg.right??cfg.value??'',ctx);const op=cfg.operator||'equals';return {result:op==='!='||op==='notEquals'?left!=right:op==='contains'?String(left).includes(String(right)):left==right}}
- if(type==='ai'){const key=process.env.OPENAI_API_KEY;if(!key)throw new Error('OPENAI_API_KEY missing');const r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({model:cfg.model||'gpt-5-mini',input:String(cfg.prompt||'')})});if(!r.ok)throw new Error(`AI request failed ${r.status}`);return r.json()}
- if(type==='database'){
+ if (type === 'ai') {
+  const prompt = String(cfg.prompt || '');
+  const inputText = String(ctx.input?.text || '');
+
+  const responseText = prompt.toLowerCase().includes('summarize')
+    ? `Demo summary: ${inputText || prompt}`.slice(0, 250)
+    : 'FlowPilot AI demo works!';
+
+  return {
+    mode: 'demo',
+    simulated: true,
+    provider: 'FlowPilot Demo AI',
+    prompt,
+    response: responseText,
+    notice: 'Simulated response. No external AI model was called.'
+  };
+}
+if(type==='database'){
    // Allow-listed application DB adapter: workflows cannot submit arbitrary SQL.
    if(cfg.resource==='notifications'&&cfg.operation==='create'){if(!cfg.userId||!cfg.title)throw new Error('notifications.create requires userId and title');return db.notification.create({data:{userId:String(cfg.userId),title:String(cfg.title),body:String(cfg.body||'')}})}
    if(cfg.resource==='notifications'&&cfg.operation==='list'){return db.notification.findMany({where:cfg.userId?{userId:String(cfg.userId)}:{},take:Math.min(Number(cfg.limit||20),100),orderBy:{createdAt:'desc'}})}
@@ -53,3 +69,4 @@ export async function runExecution(id:string){
   await db.execution.update({where:{id},data:{status:'SUCCEEDED',finishedAt:new Date(),currentNodeId:null,resumeAt:null,context:{...ctx,env:{}},error:null}})
  }catch(err:any){await db.execution.update({where:{id},data:{status:'FAILED',finishedAt:new Date(),error:err.message,context:{...ctx,env:{}}}});const members=await db.membership.findMany({where:{teamId:ex.workflow.teamId,role:{in:['OWNER','ADMIN']}},select:{userId:true}});if(members.length)await db.notification.createMany({data:members.map(m=>({userId:m.userId,title:`Workflow failed: ${ex.workflow.name}`,body:err.message}))});throw err}
 }
+
