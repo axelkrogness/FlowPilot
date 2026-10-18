@@ -2,10 +2,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 
 export default function CreateWorkflow() {
-  const router = useRouter();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -39,7 +37,7 @@ export default function CreateWorkflow() {
         throw new Error('Workflow ID was not returned');
       }
 
-      router.push(`/workflows/${data.id}`);
+      window.location.assign(`/workflows/${data.id}`);
     } catch (err) {
       setError(
         err instanceof Error
