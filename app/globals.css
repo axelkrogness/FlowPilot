@@ -4,3 +4,46 @@
 .btn.danger{background:#7f1d1d;color:#fee2e2} pre{overflow:auto;background:#071421;padding:12px;border-radius:10px} code{color:#a7f3d0}
 
 .settings-grid{display:grid;gap:16px;margin-top:24px}.item{margin-top:10px}.notice{width:100%;display:grid;text-align:left;gap:4px;background:#071421;border:1px solid #2b405a;color:white;padding:12px;border-radius:10px;margin:8px 0;cursor:pointer}@media(max-width:800px){.row{flex-wrap:wrap}.container{padding:18px}}
+
+/* FlowPilot: force dark styling for React Flow */
+
+.react-flow__controls,
+.react-flow__controls-button,
+.react-flow__minimap,
+.react-flow__attribution {
+  background-color: #10233a !important;
+  color: #e8f1ff !important;
+  border-color: #34506f !important;
+}
+
+.react-flow__controls {
+  border: 1px solid #34506f !important;
+  border-radius: 10px !important;
+  overflow: hidden;
+}
+
+.react-flow__controls-button {
+  border-bottom: 1px solid #34506f !important;
+}
+
+.react-flow__controls-button:hover {
+  background-color: #1b3654 !important;
+}
+
+.react-flow__controls-button svg {
+  fill: #e8f1ff !important;
+}
+
+.react-flow__minimap {
+  border: 1px solid #34506f !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+}
+
+.react-flow__minimap-mask {
+  fill: rgba(16, 35, 58, 0.65) !important;
+}
+
+.react-flow__attribution a {
+  color: #a9bfdc !important;
+}
